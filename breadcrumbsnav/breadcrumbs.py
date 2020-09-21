@@ -45,27 +45,29 @@ class BreadCrumbsSystem(Component):
     def environment_created(self):
         self._upgrade_db(self.env.get_db_cnx())
 
-    def environment_needs_upgrade(self, db):
-        cursor = db.cursor()
+    def environment_needs_upgrade(self):
+        with self.env.db_query as db:
+            cursor = db.cursor()
 
-        try:
-            cursor.execute("""
-                SELECT count(*)
-                  FROM session_attribute
-                 WHERE name = %s
-                """, ("breadcrumbs list",)
-                           )
-            result = cursor.fetchone()
-            if int(result[0]):
+            try:
+                cursor.execute("""
+                    SELECT count(*)
+                    FROM session_attribute
+                    WHERE name = %s
+                    """, ("breadcrumbs list",)
+                            )
+                result = cursor.fetchone()
+                if int(result[0]):
+                    return True
+
+                return False
+            except:
+                db.rollback()
                 return True
 
-            return False
-        except:
-            db.rollback()
-            return True
-
-    def upgrade_environment(self, db):
-        self._upgrade_db(db)
+    def upgrade_environment(self):
+        with self.env.db_query as db:
+            self._upgrade_db(db)
 
     def _upgrade_db(self, db):
         try:
